@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Beagle Bros — Standard & Advanced Visuals</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #121621;
+    --accent: #87f;
+    --accent2: #5df;
+    --text: #e8ecf4;
+    --muted: #9aa4b2;
+    --border: #1d2230;
+    --tooltip-bg: rgba(8,10,16,0.92);
+    --tooltip-border: #263046;
+  }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
+  header {
+    display: flex; gap: .5rem; align-items: center; padding: .75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #121826, #0f1420);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 1rem; font-weight: 600; margin: 0; color: var(--muted); letter-spacing: .02em;}
+  .spacer { flex: 1; }
+  button, .lock-btn {
+    background: linear-gradient(180deg, #1a2234, #141b2a);
+    color: var(--text); border: 1px solid var(--border); border-radius: .6rem;
+    padding: .5rem .8rem; font-weight: 600; letter-spacing: .02em;
+    cursor: pointer; box-shadow: 0 1px 0 #0007 inset, 0 1px 10px #0002;
+    transition: transform .04s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  button:hover, .lock-btn:hover { border-color: #2b3650; box-shadow: 0 6px 24px #0006, inset 0 1px 0 #fff1; }
+  button:active, .lock-btn:active { transform: translateY(1px) scale(0.995); }
+  #grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0,1fr));
+    grid-auto-rows: 1fr; gap: .75rem; padding: .75rem;
+  }
+  .pane {
+    position: relative; background: radial-gradient(120% 120% at 50% 0%, #121725 0%, #0e1320 60%, #0b0f1a 100%);
+    border: 1px solid var(--border); border-radius: .9rem; overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,.35); min-height: 220px;
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+  .overlay { position: absolute; inset: 0; pointer-events: none; }
+  .chrome {
+    position: absolute; top: .5rem; left: .6rem; right: .6rem;
+    display: flex; align-items: center; gap: .5rem; pointer-events: none;
+  }
+  .title {
+    font-size: .8rem; color: var(--muted); background: rgba(5,7,12,.5);
+    padding: .2rem .45rem; border-radius: .5rem; border: 1px solid #0008; backdrop-filter: blur(5px);
+  }
+  .badge {
+    margin-left: auto; pointer-events: auto; display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .8rem; padding: .25rem .5rem; border-radius: .6rem; border: 1px solid var(--border);
+    background: rgba(10,14,22,.6);
+  }
+  .lock-btn {
+    pointer-events: auto; font-size: .95rem; padding: .35rem .55rem;
+    background: rgba(18,24,36,.8); border: 1px solid #1e2434; display: inline-flex; align-items: center; gap: .45rem;
+  }
+  .lock-btn[data-locked="true"] { color: #ffca6a; border-color: #3a2a12; background: rgba(40,26,8,.22); }
+  .mini {
+    opacity: .75; font-variant-numeric: tabular-nums; font-size: .75rem;
+    background: rgba(8,10,16,.55); border: 1px solid #0b0e16; padding: .15rem .4rem; border-radius: .4rem;
+  }
+  #tooltip {
+    position: fixed; max-width: min(520px, 60vw); padding: .6rem .75rem; border-radius: .7rem;
+    border: 1px solid var(--tooltip-border); background: var(--tooltip-bg); color: var(--text);
+    box-shadow: 0 8px 40px rgba(0,0,0,.45); backdrop-filter: blur(8px);
+    z-index: 1000; display: none; pointer-events: none;
+  }
+  #tooltip .name { font-weight: 700; margin-bottom: .25rem; color: var(--accent2); }
+  #tooltip .explain { font-size: .9rem; color: #c9d3e7; margin-bottom: .4rem; }
+  #tooltip .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: .85rem; color: #b7c2db; background: #0a0d15; border: 1px solid #11182a;
+    padding: .35rem .5rem; border-radius: .45rem; white-space: pre-wrap;
+  }
+  /* Advanced container fills viewport below header */
+  #advancedWrap { display: none; padding: .75rem; }
+  #advancedWrap .pane { min-height: calc(100vh - 82px); }
+  @media (max-width: 920px) { #grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Beagle Bros Visuals</h1>
+    <div class="spacer"></div>
+    <button id="advancedBtn" title="Toggle advanced single-canvas mode">⚡ Advanced: Off</button>
+    <button id="shuffleBtn" title="Pick random visuals (advanced mode uses advanced library)">🔀 Shuffle</button>
+    <button id="yAxisBtn" title="Toggle Y axis up/down">(0,0) at center — Y↑</button>
+  </header>
+
+  <!-- Standard 2×2 grid -->
+  <main id="grid">
+    <div class="pane"><canvas></canvas><div class="overlay"></div></div>
+    <div class="pane"><canvas></canvas><div class="overlay"></div></div>
+    <div class="pane"><canvas></canvas><div class="overlay"></div></div>
+    <div class="pane"><canvas></canvas><div class="overlay"></div></div>
+  </main>
+
+  <!-- Advanced single canvas -->
+  <section id="advancedWrap">
+    <div class="pane" id="advancedPane"><canvas></canvas><div class="overlay"></div></div>
+  </section>
+
+  <div id="tooltip">
+    <div class="name"></div>
+    <div class="explain"></div>
+    <div class="formula"></div>
+  </div>
+
+<script>
+/* ========= Utils ========= */
+const DPR = Math.max(1, window.devicePixelRatio || 1);
+const TAU = Math.PI * 2;
+
+function resizeCanvasToDisplaySize(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(2, Math.floor(rect.width * DPR));
+  const h = Math.max(2, Math.floor(rect.height * DPR));
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  return {w, h, ctx};
+}
+
+function mulberry32(a) {
+  return function() {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+}
+
+/* Centered math space, optional Y-up */
+function beginCenteredFrame(ctx, canvas, { yUp = true } = {}) {
+  const w = canvas.width, h = canvas.height;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.translate(w/2, h/2);
+  if (yUp) ctx.scale(1, -1);
+  return { w, h, end: () => ctx.setTransform(1,0,0,1,0,0) };
+}
+
+/* ========= Standard Library (64, same behavior) ========= */
+function makeLissajous(id) {
+  const rng = mulberry32(0xA11C00DE ^ id);
+  const a = 1 + Math.floor(rng()*7);
+  const b = 1 + Math.floor(rng()*7);
+  const delta = rng() * Math.PI;
+  const name = `Lissajous ${a}:${b}`;
+  const explain = `Two sine waves at ${a} and ${b} Hz drive x and y. Phase shift δ “twists” the figure.`;
+  const formula = `x = sin(${a}u + δ),  y = sin(${b}u)\\nδ = ${delta.toFixed(2)}`;
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp });
+    const {w, h} = F; const S = 0.42 * Math.min(w, h), N = 1800, U = TAU * 2;
+    ctx.beginPath();
+    for (let i=0;i<=N;i++){
+      const u = i/N * U;
+      const x = Math.sin(a*u + delta + 0.2*Math.sin(t*0.6));
+      const y = Math.sin(b*u);
+      const X = x*S, Y = y*S;
+      if (i===0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+    }
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0022);
+    ctx.strokeStyle = `hsl(${(id*37 + t*20) % 360}, 90%, 62%)`;
+    ctx.stroke();
+    F.end();
+  }
+  return { name, explain, formula, draw };
+}
+
+function makeRose(id) {
+  const rng = mulberry32(0xBEEFFACE ^ id);
+  const p = 2 + Math.floor(rng()*7);
+  const q = 1 + Math.floor(rng()*3);
+  const k = p / q;
+  const useSin = rng() < 0.5;
+  const name = `Rose r = ${useSin ? "sin" : "cos"}(${p}/${q}·θ)`;
+  const explain = `Polar “rose.” Petals depend on k=${p}/${q}. Integer k gives k or 2k petals.`;
+  const formula = `r(θ) = ${useSin ? "sin" : "cos"}(${p}/${q}·θ)`;
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp });
+    const {w, h} = F; const S = 0.46*Math.min(w,h), N = 1800, R = 0.86 + 0.1*Math.sin(t*0.7);
+    ctx.beginPath();
+    for (let i=0;i<=N;i++){
+      const th = i/N * TAU * q * 2;
+      const r = (useSin? Math.sin(k*th + 0.2*Math.sin(t)) : Math.cos(k*th + 0.2*Math.cos(t*0.7))) * R;
+      const x = r * Math.cos(th), y = r * Math.sin(th);
+      const X = x*S, Y = y*S;
+      if (i===0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+    }
+    ctx.closePath();
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0018);
+    ctx.strokeStyle = `hsl(${(id*33 + t*30) % 360}, 90%, 70%)`;
+    ctx.stroke();
+    F.end();
+  }
+  return { name, explain, formula, draw };
+}
+
+function makeSpiro(id) {
+  const rng = mulberry32(0x51A0BEEF ^ id);
+  const epitro = rng() < 0.5;
+  const R = 0.4 + rng()*0.4, r = 0.08 + rng()*0.28, d = 0.05 + rng()*0.5;
+  const name = epitro ? "Epitrochoid" : "Hypotrochoid";
+  const explain = `${name} (spirograph): point on a rolling circle ${epitro?"outside":"inside"} another circle.`;
+  const formula = epitro ?
+`x = (R + r)cos u − d cos((R + r)/r · u)
+y = (R + r)sin u − d sin((R + r)/r · u)`
+:
+`x = (R − r)cos u + d cos((R − r)/r · u)
+y = (R − r)sin u − d sin((R − r)/r · u)`;
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp });
+    const {w, h} = F; const S = 0.9*Math.min(w,h)/2, N = 2800;
+    const Rt = R * (0.98 + 0.03*Math.sin(t*0.65));
+    const rt = r * (0.98 + 0.03*Math.cos(t*0.52));
+    const dt = d * (0.98 + 0.04*Math.sin(t*0.41));
+    const k = epitro ? (Rt + rt)/rt : (Rt - rt)/rt;
+    ctx.beginPath();
+    for (let i=0;i<=N;i++){
+      const u = i/N * TAU * 20;
+      const x = (epitro ? (Rt + rt) : (Rt - rt)) * Math.cos(u) + (epitro ? -dt : +dt)*Math.cos(k*u);
+      const y = (epitro ? (Rt + rt) : (Rt - rt)) * Math.sin(u) + (epitro ? -dt : -dt)*Math.sin(k*u);
+      const X = x*S, Y = y*S;
+      if (i===0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+    }
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0016);
+    ctx.strokeStyle = `hsl(${(19*Rt*360 + t*24) % 360}, 92%, 66%)`;
+    ctx.stroke();
+    F.end();
+  }
+  return { name, explain, formula, draw };
+}
+
+function makeHarmonograph(id) {
+  const rng = mulberry32(0x00C0FFEE ^ id);
+  const f1 = 1 + Math.floor(rng()*3), f2 = 1 + Math.floor(rng()*3), f3 = 1 + Math.floor(rng()*3);
+  const d1 = 0.01 + rng()*0.03, d2 = 0.01 + rng()*0.03, d3 = 0.01 + rng()*0.03;
+  const p1 = rng()*Math.PI, p2 = rng()*Math.PI, p3 = rng()*Math.PI;
+  const name = "Harmonograph";
+  const explain = `Decaying pendulum sines weave quasi-knots; tiny detunings make moiré.`;
+  const formula = `x=Σ e^(−d u) sin(f u+φ) , y=Σ e^(−d u) sin(f u+φ)`;
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp });
+    const {w, h} = F; const S = 0.46*Math.min(w,h), N = 3200;
+    ctx.beginPath();
+    for (let i=0;i<=N;i++){
+      const u = i/N * (18 + 6*Math.sin(t*0.2)) + t*0.2;
+      const x = Math.exp(-d1*u)*Math.sin(f1*u + p1 + 0.2*Math.sin(t*0.33))
+              + Math.exp(-d2*u)*Math.sin(f2*u + p2 + 0.2*Math.cos(t*0.29));
+      const y = Math.exp(-d3*u)*Math.sin(f3*u + p3 + 0.25*Math.sin(t*0.21));
+      const X = x*S, Y = y*S;
+      if (i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+    }
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0015);
+    ctx.strokeStyle = `hsl(${(11 + t*40) % 360}, 85%, 68%)`;
+    ctx.stroke();
+    F.end();
+  }
+  return { name, explain, formula, draw };
+}
+
+function makeSpiralField(id) {
+  const rng = mulberry32(0x05F1A741 ^ id);
+  const arms = 2 + Math.floor(rng()*6), twist = 0.5 + rng()*2.0;
+  const name = `Log Spiral x${arms}`;
+  const explain = `Galaxy-like whirl: r = a·e^(bθ). Multiple arms, exponential growth.`;
+  const formula = `r(θ)=a e^{bθ},  x=r cosθ, y=r sinθ`;
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp });
+    const {w, h} = F; const S = 0.48*Math.min(w,h);
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0017);
+    for (let k=0;k<arms;k++){
+      const hue = (k*60 + t*30) % 360;
+      ctx.beginPath();
+      for (let i=0;i<=1200;i++){
+        const a = 0.002;
+        const th = i/1200 * (Math.PI*4 + t*0.6) + k*(TAU/arms);
+        const r = a * Math.exp(twist*th/(Math.PI*4 + 0.0001));
+        const X = (r*Math.cos(th))*S, Y = (r*Math.sin(th))*S;
+        if (i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+      }
+      ctx.strokeStyle = `hsl(${hue},85%,65%)`;
+      ctx.stroke();
+    }
+    F.end();
+  }
+  return { name, explain, formula, draw };
+}
+
+function makeVisualById(id) {
+  const which = id % 5;
+  if (which === 0) return makeLissajous(id);
+  if (which === 1) return makeRose(id);
+  if (which === 2) return makeSpiro(id);
+  if (which === 3) return makeHarmonograph(id);
+  return makeSpiralField(id);
+}
+const visuals = Array.from({length: 64}, (_,i)=> makeVisualById(i));
+
+/* ========= Advanced Library (4) ========= */
+
+/* --- A) Ray-marched SDF scene --- */
+function advRaySDF() {
+  const name = "Ray Marcher — SDF (Torus+Sphere+Plane)";
+  const explain = "Sphere tracing of signed distance fields in 3D with hard/soft shadows and ambient occlusion. Camera orbits; torus and sphere animate.";
+  const formula = `d_scene(p) = min( d_plane, d_torus, d_sphere )
+n ≈ ∇d via finite differences
+shade = lambert(n·L) + spec + ambient; shadow via stepped occlusion`;
+  function draw({ctx, canvas, t}) {
+    const w = canvas.width, h = canvas.height;
+    const rx = Math.floor(w * 0.66), ry = Math.floor(h * 0.66);
+    const img = ctx.createImageData(rx, ry);
+    const data = img.data;
+
+    const ang = t*0.4;
+    const ro = [Math.cos(ang)*2.8, 1.2 + 0.2*Math.sin(t*0.7), Math.sin(ang)*2.8];
+    const look = [0, 0.3*Math.sin(t*0.5), 0];
+    const ww = norm(sub(look, ro));
+    const uu = norm(cross(ww, [0,1,0]));
+    const vv = cross(uu, ww);
+    const fov = 1.1;
+    const light = norm([0.6, 0.7, 0.5]);
+
+    for (let j=0;j<ry;j++){
+      const v = (1 - 2*(j+0.5)/ry) * fov;
+      for (let i=0;i<rx;i++){
+        const u = (2*(i+0.5)/rx - 1) * fov * (rx/ry);
+        const rd = norm(add(add(scale(uu,u), scale(vv,v)), ww));
+
+        let tacc = 0.0, hit = false, steps = 0, mId = -1;
+        for (; steps<80 && tacc < 12.0; steps++){
+          const p = add(ro, scale(rd, tacc));
+          const res = mapSDF(p, t);
+          const d = res.d; mId = res.id;
+          if (d < 0.001) { hit = true; break; }
+          tacc += d * 0.9;
+        }
+
+        let r=12, g=16, b=28;
+        if (hit) {
+          const p = add(ro, scale(rd, tacc));
+          const n = normalSDF(p, t);
+          let col = matColor(mId);
+          const sh = softShadow(add(p, scale(n, 0.01)), light, t);
+          const diff = Math.max(0, dot(n, light)) * sh;
+          const view = scale(rd, -1);
+          const hdir = norm(add(light, view));
+          const spec = Math.pow(Math.max(0, dot(n, hdir)), 32) * sh;
+          const ao = ambientOcclusion(p, n, t);
+          const amb = 0.18 * ao;
+          const c = addv(scalev(col, diff), [spec, spec, spec]);
+          col = addv(scalev(col, amb), c);
+
+          r = Math.min(255, Math.floor(col[0]*255));
+          g = Math.min(255, Math.floor(col[1]*255));
+          b = Math.min(255, Math.floor(col[2]*255));
+        }
+        const idx = (j*rx + i)*4;
+        data[idx+0]=r; data[idx+1]=g; data[idx+2]=b; data[idx+3]=255;
+      }
+    }
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,w,h);
+    const tmp = document.createElement('canvas');
+    tmp.width = rx; tmp.height = ry;
+    tmp.getContext('2d').putImageData(img,0,0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(tmp, 0, 0, w, h);
+  }
+
+  function mapSDF(p, t){
+    const dPlane = p[1] + 1.0;
+    const tor = sdTorus(p, [0.8, 0.25]);
+    const c = [Math.sin(t*0.8)*0.6, 0.4*Math.cos(t*0.6), Math.cos(t*0.7)*0.6];
+    const sph = length(sub(p, c)) - 0.45;
+    let d = dPlane, id = 0;
+    if (tor < d){ d = tor; id = 1; }
+    if (sph < d){ d = sph; id = 2; }
+    return { d, id };
+  }
+  function matColor(id){
+    if (id===1) return [0.45, 0.75, 1.0];
+    if (id===2) return [1.0, 0.55, 0.35];
+    return [0.35, 0.42, 0.5];
+  }
+  function normalSDF(p, t){
+    const e = 0.0015;
+    const d0 = mapSDF(p, t).d;
+    const dx = mapSDF([p[0]+e,p[1],p[2]], t).d - d0;
+    const dy = mapSDF([p[0],p[1]+e,p[2]], t).d - d0;
+    const dz = mapSDF([p[0],p[1],p[2]+e], t).d - d0;
+    return norm([dx,dy,dz]);
+  }
+  function softShadow(p, ldir, t){
+    let res = 1.0, tacc = 0.01;
+    for (let i=0;i<32;i++){
+      const h = mapSDF(add(p, scale(ldir, tacc)), t).d;
+      if (h < 0.0005) return 0.0;
+      res = Math.min(res, 8.0*h/tacc);
+      tacc += h;
+      if (tacc>8.0) break;
+    }
+    return Math.max(0.0, Math.min(1.0, res));
+  }
+  function ambientOcclusion(p, n, t){
+    let occ = 0.0, sca = 1.0;
+    for (let i=1;i<=5;i++){
+      const h = 0.03*i;
+      const d = mapSDF(add(p, scale(n, h)), t).d;
+      occ += (h - d) * sca;
+      sca *= 0.7;
+    }
+    return 1.0 - 0.75*Math.max(0, occ);
+  }
+  function sdTorus(p, T){
+    const qx = Math.hypot(p[0], p[2]) - T[0];
+    return Math.hypot(qx, p[1]) - T[1];
+  }
+
+  function add(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function scale(a,s){ return [a[0]*s,a[1]*s,a[2]*s]; }
+  function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+  function cross(a,b){ return [ a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0] ]; }
+  function length(a){ return Math.hypot(a[0],a[1],a[2]); }
+  function norm(a){ const L = length(a)||1; return [a[0]/L,a[1]/L,a[2]/L]; }
+  function addv(a,b){ return [a[0]+b[0],a[1]+b[1],a[2]+b[2]]; }
+  function scalev(a,s){ return [a[0]*s,a[1]*s,a[2]*s]; }
+
+  return { name, explain, formula, draw };
+}
+
+/* --- B) Mandelbulb Ray March --- */
+function advMandelbulb() {
+  const name = "Mandelbulb (n=8) Ray March";
+  const explain = "Distance-estimator ray marching of a 3D Mandelbulb fractal with gradient normals and single light. Downscaled internal render for speed.";
+  const formula = `Iterate: z_{k+1} = z_k^n + p  (n=8), tracking derivative dr
+DE(p) ≈ 0.5·|z|·ln|z|/|dr|  → march step
+n ≈ ∇DE(p), shade with lambert/specular`;
+  function draw({ctx, canvas, t}) {
+    const w = canvas.width, h = canvas.height;
+    const rx = Math.floor(w * 0.6), ry = Math.floor(h * 0.6);
+    const img = ctx.createImageData(rx, ry), data = img.data;
+
+    const ang = t*0.25 + 1.2;
+    const ro = [Math.cos(ang)*3.0, 1.2, Math.sin(ang)*3.0];
+    const look = [0, 0, 0];
+    const ww = norm3(sub3(look, ro)), uu = norm3(cross3(ww, [0,1,0])), vv = cross3(uu, ww);
+    const fov = 1.1;
+    const light = norm3([0.6, 0.8, 0.5]);
+
+    for (let j=0;j<ry;j++){
+      const v = (1 - 2*(j+0.5)/ry) * fov;
+      for (let i=0;i<rx;i++){
+        const u = (2*(i+0.5)/rx - 1) * fov * (rx/ry);
+        const rd = norm3(add3(add3(scale3(uu,u), scale3(vv,v)), ww));
+
+        let tacc=0, hit=false, steps=0;
+        for (; steps<64 && tacc<8.0; steps++){
+          const p = add3(ro, scale3(rd, tacc));
+          const d = deMandelbulb(p);
+          if (d < 0.001) { hit=true; break; }
+          tacc += d*0.9;
+        }
+        let r=8, g=10, b=16;
+        if (hit){
+          const p = add3(ro, scale3(rd, tacc));
+          const n = normalDE(p);
+          const diff = Math.max(0, dot3(n, light));
+          const view = scale3(rd,-1);
+          const hdir = norm3(add3(light, view));
+          const spec = Math.pow(Math.max(0, dot3(n, hdir)), 40);
+          const base = [0.55, 0.8, 1.0];
+          const col = add3(scale3(base, diff*0.9 + 0.1), [spec, spec, spec]);
+          r = Math.min(255, col[0]*255);
+          g = Math.min(255, col[1]*255);
+          b = Math.min(255, col[2]*255);
+        }
+        const idx = (j*rx + i)*4;
+        data[idx]=r; data[idx+1]=g; data[idx+2]=b; data[idx+3]=255;
+      }
+    }
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,w,h);
+    const tmp = document.createElement('canvas'); tmp.width=rx; tmp.height=ry;
+    tmp.getContext('2d').putImageData(img,0,0);
+    ctx.drawImage(tmp, 0, 0, w, h);
+
+    function deMandelbulb(p){
+      let z = p.slice(), dr = 1.0, r = 0.0;
+      const power = 8.0;
+      for (let i=0;i<12;i++){
+        r = Math.hypot(z[0],z[1],z[2]);
+        if (r>4.0) break;
+        let theta = Math.acos(z[1]/(r||1));
+        let phi = Math.atan2(z[2], z[0]);
+        const rPow = Math.pow(r, power-1.0);
+        dr = dr*power*rPow + 1.0;
+        const zr = Math.pow(r, power);
+        theta *= power;
+        phi   *= power;
+        z = [
+          zr*Math.sin(theta)*Math.cos(phi),
+          zr*Math.cos(theta),
+          zr*Math.sin(theta)*Math.sin(phi)
+        ];
+        z[0]+=p[0]; z[1]+=p[1]; z[2]+=p[2];
+      }
+      return 0.5*Math.log(r)*r / (dr||1);
+    }
+    function normalDE(p){
+      const e = 0.0015;
+      const d0 = deMandelbulb(p);
+      const dx = deMandelbulb([p[0]+e,p[1],p[2]]) - d0;
+      const dy = deMandelbulb([p[0],p[1]+e,p[2]]) - d0;
+      const dz = deMandelbulb([p[0],p[1],p[2]+e]) - d0;
+      return norm3([dx,dy,dz]);
+    }
+    function add3(a,b){ return [a[0]+b[0],a[1]+b[1],a[2]+b[2]]; }
+    function sub3(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
+    function scale3(a,s){ return [a[0]*s,a[1]*s,a[2]*s]; }
+    function dot3(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+    function cross3(a,b){ return [ a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0] ]; }
+    function len3(a){ return Math.hypot(a[0],a[1],a[2]); }
+    function norm3(a){ const L=len3(a)||1; return [a[0]/L,a[1]/L,a[2]/L]; }
+  }
+  return { name, explain, formula, draw };
+}
+
+/* --- C) N-Body Gravity (2D, 256 bodies) --- */
+function advNBody() {
+  const name = "N-Body Gravity — 256 Particles";
+  const explain = "Brute-force O(N²) gravity with softening ε and leapfrog integration; trails fade for motion history.";
+  const formula = `a_i = G Σ_j (m_j (x_j − x_i)) / (|r|^2 + ε^2)^{3/2}
+x_{t+dt} = x_t + v_{t+dt/2}·dt , v_{t+dt/2} = v_{t−dt/2} + a_t·dt`;
+  const N = 256, G = 1.0, EPS = 0.02;
+  const state = {
+    x: new Float32Array(N), y: new Float32Array(N),
+    vx: new Float32Array(N), vy: new Float32Array(N),
+    m: new Float32Array(N), seeded: false
+  };
+  const rng = mulberry32(0xC0FFEE99);
+
+  function seed(w,h){
+    for (let i=0;i<N;i++){
+      const r = Math.sqrt(rng())*0.9, th = rng()*TAU;
+      state.x[i] = r*Math.cos(th);
+      state.y[i] = r*Math.sin(th);
+      const v = 0.7*Math.pow(r+0.2, 0.5);
+      state.vx[i] = -v*Math.sin(th);
+      state.vy[i] =  v*Math.cos(th);
+      state.m[i] = 0.5 + rng()*1.5;
+    }
+    state.seeded = true;
+  }
+
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp: true });
+    const {w, h} = F; const S = 0.48*Math.min(w,h);
+    if (!state.seeded) seed(w,h);
+
+    ctx.fillStyle = "rgba(10,12,18,0.25)";
+    ctx.fillRect(-w/2, -h/2, w, h);
+
+    const ax = new Float32Array(N), ay = new Float32Array(N);
+    for (let i=0;i<N;i++){
+      let fx=0, fy=0;
+      const xi=state.x[i], yi=state.y[i];
+      for (let j=0;j<N;j++){
+        if (i===j) continue;
+        const dx = state.x[j]-xi, dy = state.y[j]-yi;
+        const r2 = dx*dx + dy*dy + EPS*EPS;
+        const inv = 1/Math.sqrt(r2*r2*r2);
+        const f = G*state.m[j]*inv;
+        fx += dx*f; fy += dy*f;
+      }
+      ax[i]=fx; ay[i]=fy;
+    }
+
+    const dt = 0.008;
+    for (let i=0;i<N;i++){
+      state.vx[i] += ax[i]*dt;
+      state.vy[i] += ay[i]*dt;
+      state.x[i] += state.vx[i]*dt;
+      state.y[i] += state.vy[i]*dt;
+    }
+
+    ctx.beginPath();
+    for (let i=0;i<N;i++){
+      const X = state.x[i]*S, Y = state.y[i]*S;
+      ctx.moveTo(X+1, Y);
+      ctx.arc(X, Y, Math.max(1, Math.min(w,h)*0.004*(state.m[i]*0.4)), 0, TAU);
+    }
+    ctx.fillStyle = "rgba(120,180,255,0.9)";
+    ctx.fill();
+
+    F.end();
+  }
+  return { name, explain, formula, draw };
+}
+
+/* --- D) Potential Flow → Joukowski Airfoil Streamlines --- */
+function advAirfoil() {
+  const name = "Potential Flow → Joukowski Airfoil";
+  const explain = "Uniform flow around an offset circle with circulation Γ, mapped by Joukowski ζ=z+1/z to an airfoil. Streamlines are conformally mapped images of cylinder flow.";
+  const formula = `W(z)=U e^{-iα}\\,(z−z₀ + a^2/(z−z₀)) + iΓ/(2π) log(z−z₀)
+ζ = z + 1/z  (Joukowski map)
+streamlines in ζ-plane = image of cylinder streamlines`;
+  const U = 1.0, alpha = 6*Math.PI/180;
+  const a = 1.0;
+  const z0 = {x: 0.1, y: 0.0};
+  const Gamma = 4*Math.PI*U*a*Math.sin(alpha);
+
+  const seeds = [];
+  for (let k=-12;k<=12;k++) seeds.push({x:-3.0, y:k*0.2});
+
+  function draw({ctx, canvas, t, yUp}) {
+    const F = beginCenteredFrame(ctx, canvas, { yUp: true });
+    const {w,h} = F; const S = 0.22*Math.min(w,h);
+
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.002);
+    ctx.strokeStyle = "rgba(200,220,255,0.9)";
+    ctx.beginPath();
+    for (let th=0; th<=TAU+1e-3; th+=0.01){
+      const z = {x: z0.x + a*Math.cos(th), y: z0.y + a*Math.sin(th)};
+      const Z = joukowski(z);
+      const X = Z.x*S, Y = Z.y*S;
+      if (th===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+    }
+    ctx.stroke();
+
+    ctx.lineWidth = Math.max(1, Math.min(w,h)*0.0012);
+    ctx.strokeStyle = "rgba(120,180,255,0.75)";
+    for (const s of seeds){
+      let z = {x:s.x, y:s.y};
+      ctx.beginPath();
+      for (let step=0; step<480; step++){
+        const Z = joukowski(z);
+        const X = Z.x*S, Y = Z.y*S;
+        if (step===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+        const zrel = {x:z.x - z0.x, y:z.y - z0.y};
+        const invz2 = inv(pow(zrel,2));
+        const term = subC(one(), mulC(a*a, invz2));
+        const dW = mulC( rot(-alpha), term );
+        const circ = divC( mulC({x:0, y:Gamma/(2*Math.PI)}, one()), zrel );
+        const wprime = addC( mulC({x:U, y:0}, dW), circ );
+        const vel = {x: wprime.x, y: -wprime.y};
+        const dt = 0.015;
+        const k1 = vel;
+        const mid = {x: z.x + k1.x*dt*0.5, y: z.y + k1.y*dt*0.5};
+        const zrel2 = {x: mid.x - z0.x, y: mid.y - z0.y};
+        const invz2b = inv(pow(zrel2,2));
+        const term2 = subC(one(), mulC(a*a, invz2b));
+        const dW2 = mulC( rot(-alpha), term2 );
+        const circ2 = divC( mulC({x:0, y:Gamma/(2*Math.PI)}, one()), zrel2 );
+        const wprime2 = addC( mulC({x:U, y:0}, dW2), circ2 );
+        const vel2 = {x: wprime2.x, y: -wprime2.y};
+        z = {x: z.x + vel2.x*dt, y: z.y + vel2.y*dt};
+        const rrel = Math.hypot(zrel.x, zrel.y);
+        if (rrel < a*1.01 || Math.abs(z.x)>5 || Math.abs(z.y)>5) break;
+      }
+      ctx.stroke();
+    }
+
+    F.end();
+  }
+
+  function joukowski(z){ const r2 = z.x*z.x + z.y*z.y || 1e-6; return { x: z.x + z.x/r2, y: z.y - z.y/r2 }; }
+  function one(){ return {x:1,y:0}; }
+  function rot(theta){ return {x:Math.cos(theta), y:Math.sin(theta)}; }
+  function addC(a,b){ return {x:a.x+b.x, y:a.y+b.y}; }
+  function subC(a,b){ return {x:a.x-b.x, y:a.y-b.y}; }
+  function mulC(a,b){ return {x:a.x*b.x - a.y*b.y, y:a.x*b.y + a.y*b.x}; }
+  function divC(a,b){ const d=b.x*b.x+b.y*b.y||1e-9; return {x:(a.x*b.x+a.y*b.y)/d, y:(a.y*b.x-a.x*b.y)/d}; }
+  function pow(a,n){
+    if (n===2) return {x:a.x*a.x - a.y*a.y, y:2*a.x*a.y};
+    let r={x:1,y:0}, b=a; while(n>0){ if(n&1) r=mulC(r,b); b=mulC(b,b); n>>=1; } return r;
+  }
+  function inv(a){ const d=a.x*a.x+a.y*a.y||1e-9; return {x:a.x/d, y:-a.y/d}; }
+
+  return { name, explain, formula, draw };
+}
+
+const advancedVisuals = [
+  advRaySDF(),
+  advMandelbulb(),
+  advNBody(),
+  advAirfoil()
+];
+
+/* ========= UI & State ========= */
+const panes = [];
+const grid = document.getElementById('grid');
+const tooltip = document.getElementById('tooltip');
+const ttName = tooltip.querySelector('.name');
+const ttExplain = tooltip.querySelector('.explain');
+const ttFormula = tooltip.querySelector('.formula');
+
+const advancedWrap = document.getElementById('advancedWrap');
+const advancedPaneEl = document.getElementById('advancedPane');
+
+let yUpGlobal = true;
+let advancedMode = false;
+let currentAdvancedIndex = 0;
+
+function setupPane(paneEl, initialVisualIndex, source="standard") {
+  const canvas = paneEl.querySelector('canvas');
+
+  const title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = (source==="standard" ? visuals[initialVisualIndex].name : advancedVisuals[currentAdvancedIndex].name);
+
+  const fpsBadge = document.createElement('div');
+  fpsBadge.className = 'mini';
+  fpsBadge.textContent = 'fps';
+  fpsBadge.style.marginLeft = '.5rem';
+
+  const chrome = document.createElement('div');
+  chrome.className = 'chrome';
+  chrome.appendChild(title);
+  chrome.appendChild(fpsBadge);
+
+  const badgeWrap = document.createElement('div');
+  badgeWrap.className = 'badge';
+
+  let lockBtn = null;
+  if (source==="standard") {
+    lockBtn = document.createElement('button');
+    lockBtn.className = 'lock-btn';
+    lockBtn.innerHTML = '🔓 <span>Unlocked</span>';
+    lockBtn.setAttribute('aria-label', 'Toggle lock');
+    lockBtn.dataset.locked = "false";
+    badgeWrap.appendChild(lockBtn);
+  }
+  chrome.appendChild(badgeWrap);
+  paneEl.appendChild(chrome);
+
+  const pane = {
+    source,
+    el: paneEl,
+    canvas,
+    ctx: canvas.getContext('2d'),
+    idx: initialVisualIndex,
+    locked: false,
+    titleEl: title,
+    fpsEl: fpsBadge,
+    lockBtn,
+    hovering: false,
+    lastHoverEvent: null,
+    lastFrameTime: performance.now(),
+    frameCount: 0,
+    fps: 0
+  };
+
+  if (lockBtn) {
+    lockBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      pane.locked = !pane.locked;
+      if (pane.locked) { lockBtn.dataset.locked = "true"; lockBtn.innerHTML = '🔒 <span>Locked</span>'; }
+      else { lockBtn.dataset.locked = "false"; lockBtn.innerHTML = '🔓 <span>Unlocked</span>'; }
+    });
+  }
+
+  paneEl.addEventListener('mouseenter', (ev)=>{ pane.hovering = true; pane.lastHoverEvent = ev; showTooltipForPane(pane, ev); });
+  paneEl.addEventListener('mousemove',  (ev)=>{ pane.lastHoverEvent = ev; if (pane.hovering) showTooltipForPane(pane, ev); });
+  paneEl.addEventListener('mouseleave', ()=>{ pane.hovering = false; hideTooltip(); });
+
+  panes.push(pane);
+  return pane;
+}
+
+function showTooltipForPane(pane, ev) {
+  const v = (pane.source==="standard") ? visuals[pane.idx] : advancedVisuals[currentAdvancedIndex];
+  ttName.textContent   = v.name;
+  ttExplain.textContent= v.explain;
+  ttFormula.textContent= v.formula;
+  tooltip.style.display = 'block';
+  const pad = 12, x = ev.clientX, y = ev.clientY;
+  const rect = tooltip.getBoundingClientRect();
+  let left = x + pad, top = y + pad;
+  if (left + rect.width > window.innerWidth - 8) left = x - rect.width - pad;
+  if (top + rect.height > window.innerHeight - 8) top = y - rect.height - pad;
+  tooltip.style.left = `${left}px`; tooltip.style.top = `${top}px`;
+}
+function hideTooltip(){ tooltip.style.display = 'none'; }
+
+function pickRandomIndices(n, excludeSet = new Set()) {
+  const all = [];
+  for (let i=0;i<visuals.length;i++) if (!excludeSet.has(i)) all.push(i);
+  for (let i=all.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [all[i], all[j]] = [all[j], all[i]]; }
+  return all.slice(0, n);
+}
+
+function assignVisual(pane, idx) {
+  pane.idx = idx;
+  pane.titleEl.textContent = visuals[idx].name;
+}
+
+function shuffle() {
+  if (!advancedMode) {
+    const lockedIdxs = new Set(panes.filter(p=>p.source==="standard" && p.locked).map(p=>p.idx));
+    const unlocked = panes.filter(p=>p.source==="standard" && !p.locked);
+    const need = unlocked.length;
+    const picks = pickRandomIndices(need, lockedIdxs);
+    unlocked.forEach((p, i)=> assignVisual(p, picks[i]));
+  } else {
+    currentAdvancedIndex = Math.floor(Math.random()*advancedVisuals.length);
+    const p = panes.find(p=>p.source==="advanced");
+    if (p) p.titleEl.textContent = advancedVisuals[currentAdvancedIndex].name;
+  }
+}
+
+function render(timeMs) {
+  const t = timeMs / 1000;
+  for (const pane of panes) {
+    const {w, h, ctx} = resizeCanvasToDisplaySize(pane.canvas);
+    const v = (pane.source==="standard") ? visuals[pane.idx] : advancedVisuals[currentAdvancedIndex];
+    v.draw({ ctx, canvas: pane.canvas, t, yUp: yUpGlobal });
+
+    pane.frameCount++;
+    const dt = timeMs - pane.lastFrameTime;
+    if (dt >= 500) {
+      pane.fps = Math.round( (pane.frameCount / dt) * 1000 );
+      pane.fpsEl.textContent = `${pane.fps} fps`;
+      pane.frameCount = 0;
+      pane.lastFrameTime = timeMs;
+    }
+  }
+  requestAnimationFrame(render);
+}
+
+Array.from(document.querySelectorAll('#grid .pane')).forEach((el, i)=> setupPane(el, i, "standard"));
+setupPane(advancedPaneEl, 0, "advanced");
+
+const shuffleBtn  = document.getElementById('shuffleBtn');
+const yAxisBtn    = document.getElementById('yAxisBtn');
+const advancedBtn = document.getElementById('advancedBtn');
+
+shuffleBtn.addEventListener('click', shuffle);
+function updateYAxisBtn(){ yAxisBtn.textContent = yUpGlobal ? "(0,0) at center — Y↑" : "(0,0) at center — Y↓"; }
+yAxisBtn.addEventListener('click', ()=>{ yUpGlobal = !yUpGlobal; updateYAxisBtn(); });
+updateYAxisBtn();
+
+advancedBtn.addEventListener('click', ()=>{
+  advancedMode = !advancedMode;
+  advancedBtn.textContent = advancedMode ? "⚡ Advanced: On" : "⚡ Advanced: Off";
+  grid.style.display = advancedMode ? "none" : "grid";
+  advancedWrap.style.display = advancedMode ? "block" : "none";
+  const p = panes.find(p=>p.source==="advanced");
+  if (p) p.titleEl.textContent = advancedVisuals[currentAdvancedIndex].name;
+});
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
